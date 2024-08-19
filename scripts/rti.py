@@ -29,7 +29,7 @@ def identify_and_transcribe(model, audio_segment):
     audio_segment = audio_segment.astype(np.float32) / 32768.0
 
     
-    result = model.transcribe(audio_segment, fp16=False)
+    result = model.transcribe(audio_segment, fp16=False, language=None)
 
     language = result['language']
     transcription = result['text']
@@ -38,6 +38,7 @@ def identify_and_transcribe(model, audio_segment):
 
 def segment_and_transcribe(model, stream, screen):
     live_text = ""
+    last_language = ""
     screen.clear()
     screen.refresh()
     
@@ -45,7 +46,12 @@ def segment_and_transcribe(model, stream, screen):
         audio_segment = capture_audio_segment(stream)
         language, transcription = identify_and_transcribe(model, audio_segment)
         
-        live_text += f"[{language}] {transcription.strip()} "
+        
+        if transcription.strip():
+            if language != last_language:
+                live_text += f"\n[{language}] "
+                last_language = language
+            live_text += transcription.strip() + " "
         
         screen.clear()
         screen.addstr(0, 0, live_text)
