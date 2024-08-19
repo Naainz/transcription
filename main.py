@@ -14,6 +14,9 @@ from difflib import SequenceMatcher
 small_model_path = "vosk-en"
 big_model_path = "vosk-en-big"
 
+# CHANGE THIS TO THE PATH OF THE AUDIO FILE
+file_path = "transcription.mp3"
+
 init(autoreset=True)
 
 def gentle_normalize(audio_segment, target_dBFS=-20.0):
@@ -69,7 +72,6 @@ def colorize_word(word, confidence):
     return color + word + Style.RESET_ALL
 
 def main():
-    file_path = "transcription.mp3"
     processed_audio_path = preprocess_audio(file_path)
 
     print(Fore.BLUE + f"\nTranscribing with {big_model_path} model...")
