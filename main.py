@@ -19,7 +19,7 @@ def gentle_normalize(audio_segment, target_dBFS=-20.0):
 def preprocess_audio(file_path):
     audio = AudioSegment.from_file(file_path)
     audio = audio.set_channels(1).set_frame_rate(16000)
-    audio = gentle_normalize(audio)  
+    audio = gentle_normalize(audio)  # Apply gentle normalization
     processed_audio_path = "processed_audio.wav"
     audio.export(processed_audio_path, format="wav")
     return processed_audio_path
@@ -38,34 +38,45 @@ def transcribe_audio(file_path, model_path):
     wf = wave.open(wav_path, "rb")
     rec = KaldiRecognizer(model, wf.getframerate())
     transcription = []
+    full_text = ""  # Variable to store the complete transcription text
+
     while True:
         data = wf.readframes(4000)
         if len(data) == 0:
             break
         if rec.AcceptWaveform(data):
             result = rec.Result()
+            print("Intermediate Result:", result)  # Debug output
             result_dict = json.loads(result)
-            if 'result' in result_dict:  
-                for item in result_dict['result']:
+            if 'text' in result_dict:
+                full_text += " " + result_dict['text']  # Add the text to full transcription
+                for item in result_dict.get('result', []):
                     word = item['word']
                     confidence = item['conf']
                     colored_word = color_word(word, confidence)
                     transcription.append(colored_word)
+        else:
+            partial_result = rec.PartialResult()
+            print("Partial Result:", partial_result)  # Debug output
+
     final_result = json.loads(rec.FinalResult())
-    if 'result' in final_result:  
-        for item in final_result['result']:
+    print("Final Result:", final_result)  # Debug output
+    if 'text' in final_result:
+        full_text += " " + final_result['text']
+        for item in final_result.get('result', []):
             word = item['word']
             confidence = item['conf']
             colored_word = color_word(word, confidence)
             transcription.append(colored_word)
-    return transcription, wav_path
+
+    return transcription, full_text.strip(), wav_path
 
 def correct_grammar(text):
     blob = TextBlob(text)
     corrected_text = str(blob.correct())
     return corrected_text
 
-model_path = "vosk-en-big"
+model_path = "vosk-en-big"  # Ensure this path points to your model directory
 file_path = "transcription.mp3"
 
 if file_path.endswith((".mp4", ".mkv", ".avi")):
@@ -73,15 +84,13 @@ if file_path.endswith((".mp4", ".mkv", ".avi")):
     extract_audio(file_path, audio_file)
     file_path = audio_file
 
-transcription_result, processed_audio_path = transcribe_audio(file_path, model_path)
+transcription_result, transcribed_text, processed_audio_path = transcribe_audio(file_path, model_path)
 
-
-transcribed_text = " ".join(transcription_result)
-if transcribed_text.strip():  
+if transcribed_text.strip():  # Check if any transcription was actually captured
     corrected_text = correct_grammar(transcribed_text)
 
     print("Transcription with Color Coding:")
-    print(transcribed_text)
+    print(" ".join(transcription_result))
 
     print("\nCorrected Grammar Text:")
     print(corrected_text)
