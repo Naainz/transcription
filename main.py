@@ -44,7 +44,7 @@ def transcribe_audio(file_path, model_path):
     return transcription
 
 
-model_path = "/vosk-en"  
+model_path = "vosk-en"
 file_path = "transcription.mp3"  
 
 
