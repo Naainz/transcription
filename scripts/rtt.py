@@ -1,8 +1,11 @@
 import os
+import wave
 import json
 from vosk import Model, KaldiRecognizer
 import pyaudio
-import curses
+import time
+from pydub import AudioSegment
+from io import BytesIO
 
 def load_model(model_path):
     if not os.path.exists(model_path):
@@ -10,48 +13,68 @@ def load_model(model_path):
         return None
     return Model(model_path)
 
-def start_audio_stream(rate=16000):
+def start_audio_stream(rate=16000, device_index=None):
     p = pyaudio.PyAudio()
-    stream = p.open(format=pyaudio.paInt16, channels=1, rate=rate, input=True, frames_per_buffer=8000)
-    stream.start_stream()
+    stream = p.open(format=pyaudio.paInt16,
+                    channels=1,
+                    rate=rate,
+                    input=True,
+                    frames_per_buffer=4000,
+                    input_device_index=device_index)
     return stream
 
-def transcribe_live_audio(model, stream):
+def transcribe_audio_segment(model, audio_data):
     recognizer = KaldiRecognizer(model, 16000)
-    recognizer.SetWords(True)
+    audio = AudioSegment.from_file(BytesIO(audio_data), format="mp3")
+    wave_data = audio.export(format="wav")
     
+    wf = wave.open(wave_data, 'rb')
+    recognizer = KaldiRecognizer(model, wf.getframerate())
+    transcription = []
+
     while True:
-        data = stream.read(4000, exception_on_overflow=False)
+        data = wf.readframes(4000)
+        if len(data) == 0:
+            break
         if recognizer.AcceptWaveform(data):
             result = json.loads(recognizer.Result())
-            text = result.get('text', '').strip()
-            if text:
-                yield text
+            transcription.append(result.get('text', '').strip())
 
-def live_transcription(screen, model):
-    stream = start_audio_stream()
+    final_result = json.loads(recognizer.FinalResult())
+    transcription.append(final_result.get('text', '').strip())
     
-    
-    live_text = ""
+    return ' '.join(transcription)
 
-    for text in transcribe_live_audio(model, stream):
-        live_text += " " + text
-        live_text = live_text.strip()
+def capture_audio_segment(stream, duration=3):
+    frames = []
+    for _ in range(0, int(16000 / 4000 * duration)):
+        data = stream.read(4000, exception_on_overflow=False)
+        frames.append(data)
+    return b''.join(frames)
 
+def segment_and_transcribe(model, stream):
+    while True:
+        print("Capturing audio segment...")
+        audio_data = capture_audio_segment(stream)
         
-        screen.clear()
-        screen.addstr(0, 0, f"Live Transcription: {live_text}")
-        screen.refresh()
+        print("Processing and transcribing...")
+        audio_segment = AudioSegment(data=audio_data, sample_width=2, frame_rate=16000, channels=1)
+        mp3_data = BytesIO()
+        audio_segment.export(mp3_data, format="mp3")
+
+        transcription = transcribe_audio_segment(model, mp3_data.getvalue())
+        print(f"Transcription: {transcription}")
 
 def main():
-    model_path = "vosk-en-big"  
+    model_path = "vosk-model-small-ru-0.22"  
+    device_index = 2 
 
     model = load_model(model_path)
     if model is None:
         return
 
-    
-    curses.wrapper(live_transcription, model)
+    stream = start_audio_stream(device_index=device_index)
+    segment_and_transcribe(model, stream)
 
 if __name__ == "__main__":
     main()
