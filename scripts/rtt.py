@@ -1,11 +1,12 @@
 import os
-import wave
 import json
 from vosk import Model, KaldiRecognizer
 import pyaudio
 import time
 from pydub import AudioSegment
 from io import BytesIO
+import wave
+import curses
 
 def load_model(model_path):
     if not os.path.exists(model_path):
@@ -26,9 +27,13 @@ def start_audio_stream(rate=16000, device_index=None):
 def transcribe_audio_segment(model, audio_data):
     recognizer = KaldiRecognizer(model, 16000)
     audio = AudioSegment.from_file(BytesIO(audio_data), format="mp3")
-    wave_data = audio.export(format="wav")
     
-    wf = wave.open(wave_data, 'rb')
+    
+    wav_io = BytesIO()
+    audio.export(wav_io, format="wav")
+    wav_io.seek(0)
+    
+    wf = wave.open(wav_io, 'rb')
     recognizer = KaldiRecognizer(model, wf.getframerate())
     transcription = []
 
@@ -52,29 +57,35 @@ def capture_audio_segment(stream, duration=3):
         frames.append(data)
     return b''.join(frames)
 
-def segment_and_transcribe(model, stream):
+def segment_and_transcribe(model, stream, screen):
+    live_text = ""
+    screen.clear()
+    screen.refresh()
+    
     while True:
-        print("Capturing audio segment...")
         audio_data = capture_audio_segment(stream)
         
-        print("Processing and transcribing...")
         audio_segment = AudioSegment(data=audio_data, sample_width=2, frame_rate=16000, channels=1)
         mp3_data = BytesIO()
         audio_segment.export(mp3_data, format="mp3")
 
         transcription = transcribe_audio_segment(model, mp3_data.getvalue())
-        print(f"Transcription: {transcription}")
+        live_text += " " + transcription.strip()
+        
+        screen.clear()
+        screen.addstr(0, 0, live_text)
+        screen.refresh()
 
-def main():
+def main(stdscr):
     model_path = "vosk-model-small-ru-0.22"  
-    device_index = 2 
+    device_index = 2  
 
     model = load_model(model_path)
     if model is None:
         return
 
     stream = start_audio_stream(device_index=device_index)
-    segment_and_transcribe(model, stream)
+    segment_and_transcribe(model, stream, stdscr)
 
 if __name__ == "__main__":
-    main()
+    curses.wrapper(main)
