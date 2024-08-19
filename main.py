@@ -3,14 +3,7 @@ import wave
 import json
 from vosk import Model, KaldiRecognizer
 from pydub import AudioSegment
-from pydub.effects import normalize
-from moviepy.editor import VideoFileClip
-from termcolor import colored
-from textblob import TextBlob
-
-def extract_audio(video_path, audio_path):
-    video = VideoFileClip(video_path)
-    video.audio.write_audiofile(audio_path)
+import language_tool_python
 
 def gentle_normalize(audio_segment, target_dBFS=-20.0):
     change_in_dBFS = target_dBFS - audio_segment.dBFS
@@ -24,21 +17,12 @@ def preprocess_audio(file_path):
     audio.export(processed_audio_path, format="wav")
     return processed_audio_path
 
-def color_word(word, confidence):
-    if confidence < 0.2:
-        return colored(word, 'red')
-    elif confidence < 0.6:
-        return colored(word, 'yellow')
-    else:
-        return colored(word, 'green')
-
 def transcribe_audio(file_path, model_path):
     model = Model(model_path)
     wav_path = preprocess_audio(file_path)
     wf = wave.open(wav_path, "rb")
     rec = KaldiRecognizer(model, wf.getframerate())
-    transcription = []
-    full_text = ""  
+    transcription = ""
 
     while True:
         data = wf.readframes(4000)
@@ -46,55 +30,29 @@ def transcribe_audio(file_path, model_path):
             break
         if rec.AcceptWaveform(data):
             result = rec.Result()
-            print("Intermediate Result:", result)  
             result_dict = json.loads(result)
             if 'text' in result_dict:
-                full_text += " " + result_dict['text']  
-                for item in result_dict.get('result', []):
-                    word = item['word']
-                    confidence = item['conf']
-                    colored_word = color_word(word, confidence)
-                    transcription.append(colored_word)
-        else:
-            partial_result = rec.PartialResult()
-            print("Partial Result:", partial_result)  
+                transcription += " " + result_dict['text']
 
     final_result = json.loads(rec.FinalResult())
-    print("Final Result:", final_result)  
     if 'text' in final_result:
-        full_text += " " + final_result['text']
-        for item in final_result.get('result', []):
-            word = item['word']
-            confidence = item['conf']
-            colored_word = color_word(word, confidence)
-            transcription.append(colored_word)
+        transcription += " " + final_result['text']
 
-    return transcription, full_text.strip(), wav_path
+    return transcription.strip()
 
 def correct_grammar(text):
-    blob = TextBlob(text)
-    corrected_text = str(blob.correct())
+    tool = language_tool_python.LanguageTool('en-US')
+    matches = tool.check(text)
+    corrected_text = language_tool_python.utils.correct(text, matches)
     return corrected_text
 
 model_path = "vosk-en-big"  
 file_path = "transcription.mp3"
 
-if file_path.endswith((".mp4", ".mkv", ".avi")):
-    audio_file = "extracted_audio.wav"
-    extract_audio(file_path, audio_file)
-    file_path = audio_file
+transcription_result = transcribe_audio(file_path, model_path)
 
-transcription_result, transcribed_text, processed_audio_path = transcribe_audio(file_path, model_path)
-
-if transcribed_text.strip():  
-    corrected_text = correct_grammar(transcribed_text)
-
-    print("Transcription with Color Coding:")
-    print(" ".join(transcription_result))
-
-    print("\nCorrected Grammar Text:")
+if transcription_result:
+    corrected_text = correct_grammar(transcription_result)
     print(corrected_text)
 else:
-    print("No transcription was captured. Please check the audio input or model output.")
-
-print(f"Processed audio saved at: {processed_audio_path}")
+    print("No transcription was captured.")
