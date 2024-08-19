@@ -5,6 +5,8 @@ from vosk import Model, KaldiRecognizer
 from pydub import AudioSegment
 from pydub.effects import normalize
 from moviepy.editor import VideoFileClip
+from termcolor import colored
+from textblob import TextBlob
 
 def extract_audio(video_path, audio_path):
     video = VideoFileClip(video_path)
@@ -17,10 +19,18 @@ def gentle_normalize(audio_segment, target_dBFS=-20.0):
 def preprocess_audio(file_path):
     audio = AudioSegment.from_file(file_path)
     audio = audio.set_channels(1).set_frame_rate(16000)
-    audio = gentle_normalize(audio)  # Apply gentle normalization
+    audio = gentle_normalize(audio)  
     processed_audio_path = "processed_audio.wav"
     audio.export(processed_audio_path, format="wav")
     return processed_audio_path
+
+def color_word(word, confidence):
+    if confidence < 0.2:
+        return colored(word, 'red')
+    elif confidence < 0.6:
+        return colored(word, 'yellow')
+    else:
+        return colored(word, 'green')
 
 def transcribe_audio(file_path, model_path):
     model = Model(model_path)
@@ -34,11 +44,28 @@ def transcribe_audio(file_path, model_path):
             break
         if rec.AcceptWaveform(data):
             result = rec.Result()
-            transcription.append(json.loads(result))
-    transcription.append(json.loads(rec.FinalResult()))
+            result_dict = json.loads(result)
+            if 'result' in result_dict:  
+                for item in result_dict['result']:
+                    word = item['word']
+                    confidence = item['conf']
+                    colored_word = color_word(word, confidence)
+                    transcription.append(colored_word)
+    final_result = json.loads(rec.FinalResult())
+    if 'result' in final_result:  
+        for item in final_result['result']:
+            word = item['word']
+            confidence = item['conf']
+            colored_word = color_word(word, confidence)
+            transcription.append(colored_word)
     return transcription, wav_path
 
-model_path = "vosk-en"
+def correct_grammar(text):
+    blob = TextBlob(text)
+    corrected_text = str(blob.correct())
+    return corrected_text
+
+model_path = "vosk-en-big"
 file_path = "transcription.mp3"
 
 if file_path.endswith((".mp4", ".mkv", ".avi")):
@@ -48,7 +75,17 @@ if file_path.endswith((".mp4", ".mkv", ".avi")):
 
 transcription_result, processed_audio_path = transcribe_audio(file_path, model_path)
 
-for segment in transcription_result:
-    print(segment["text"])
+
+transcribed_text = " ".join(transcription_result)
+if transcribed_text.strip():  
+    corrected_text = correct_grammar(transcribed_text)
+
+    print("Transcription with Color Coding:")
+    print(transcribed_text)
+
+    print("\nCorrected Grammar Text:")
+    print(corrected_text)
+else:
+    print("No transcription was captured. Please check the audio input or model output.")
 
 print(f"Processed audio saved at: {processed_audio_path}")
