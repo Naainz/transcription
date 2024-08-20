@@ -7,6 +7,9 @@ import numpy as np
 import librosa
 import soundfile as sf
 
+# CHANGE THIS TO THE PATH OF THE AUDIO FILE
+file_path = 'multilingual.mp3'
+
 def load_whisper_model():
     model = whisper.load_model("base")
     return model
@@ -38,7 +41,6 @@ def transcribe_audio_file(model, file_path, screen):
 
 def main(stdscr):
     model = load_whisper_model()
-    file_path = 'transcription.mp3'
     transcribe_audio_file(model, file_path, stdscr)
 
 if __name__ == "__main__":
