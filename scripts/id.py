@@ -30,12 +30,15 @@ def transcribe_audio_file(model, file_path, screen):
     live_text = f"[{language}] {transcription.strip()}"
     screen.addstr(0, 0, live_text)
     screen.refresh()
+    
+    while True:
+        key = screen.getch()
+        if key == ord('q'):
+            break
 
 def main(stdscr):
     model = load_whisper_model()
-
     file_path = 'transcription.mp3'
-    
     transcribe_audio_file(model, file_path, stdscr)
 
 if __name__ == "__main__":

@@ -1,0 +1,23 @@
+Using the following script for realtime transcription testing multilanguage
+(also in multilingual.mp3)
+
+Order of languages:
+1. English
+2. Japanese
+3. Greek
+4. Armenian
+5. Russian
+6. German
+
+"Hello, how are you today?"
+
+"こんにちは、お元気ですか？"
+
+"Γεια σου, πώς είσαι σήμερα;"
+
+"Բարեւ, ինչպե՞ս ես այսօր:"
+
+"Здравствуйте, как вы сегодня?"
+
+"Hallo, wie geht es Ihnen heute?"
+
