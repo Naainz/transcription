@@ -8,7 +8,7 @@ import librosa
 import soundfile as sf
 
 # CHANGE THIS TO THE PATH OF THE AUDIO FILE
-file_path = 'multilingual.mp3'
+file_path = 'audio/el.mp3'
 
 def load_whisper_model():
     model = whisper.load_model("base")
