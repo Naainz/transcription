@@ -2,3 +2,5 @@
 vosk-en
 vosk-en-big
 vosk-model-small-ru-0.22
+
+.env
