@@ -52,13 +52,15 @@ python ai/youtube.py
 
 **I (Naainz) am not responsible for any misuse of any of the tools in this project.**
 
+## Acknowledgements
+
+- [OpenAI](https://openai.com)
+- [ElevenLabs](https://elevenlabs.com)
+- [VOSK](https://alphacephei.com/vosk/)
+- [yt-dlp](https://github.com/yt-dlp/yt-dlp)
+- [Ryan Guy](https://www.youtube.com/watch?v=JhU0yO43b6o)
+
 ## License
 
 This project is licensed under the [GNU General Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.en.html).
 
-
-
-
-
-https://www.youtube.com/watch?v=JhU0yO43b6o
-Video used for basic transcription testing
