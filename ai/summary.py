@@ -28,7 +28,7 @@ def transcribe_audio(model, audio_segment):
 
 def summarize_transcription(transcription):
     response = openai.ChatCompletion.create(
-        model="gpt-4",
+        model="gpt-4o-mini",
         messages=[
             {"role": "system", "content": "You are a helpful assistant."},
             {"role": "user", "content": f"Please summarize the following transcription:\n\n{transcription}"}
