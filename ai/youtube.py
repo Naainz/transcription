@@ -10,10 +10,12 @@ import whisper
 import openai
 import numpy as np
 import librosa
+import requests
 from dotenv import load_dotenv
 
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
+elevenlabs_api_key = os.getenv("ELEVENLABS_API_KEY")
 
 # CHANGE THIS TO THE URL OF THE YOUTUBE VIDEO
 # OR LEAVE IT AS IT IS TO ALLOW USER INPUT
@@ -67,14 +69,41 @@ def summarize_transcription(transcription):
     summary = response['choices'][0]['message']['content']
     return summary
 
-def summarize_audio_video():
+def text_to_speech(text):
+    url = "https://api.elevenlabs.io/v1/text-to-speech/nPczCjzI2devNBz1zQrb"
+    headers = {
+        "Accept": "audio/mpeg",
+        "xi-api-key": elevenlabs_api_key,
+        "Content-Type": "application/json"
+    }
+    data = {
+        "text": text,
+        "model_id": "eleven_turbo_v2",
+        "voice_settings": {
+            "stability": 0.5,
+            "similarity_boost": 0.75
+        }
+    }
+    
+    response = requests.post(url, json=data, headers=headers)
+    if response.status_code == 200:
+        with open("output.mp3", "wb") as f:
+            f.write(response.content)
+        os.system("afplay output.mp3")  
+        os.remove("output.mp3")
+    else:
+        print("Error:", response.status_code, response.text)
+
+def summarize_and_speak():
     model = load_whisper_model()
     audio_segment = load_audio_file(file_path)
     transcription = transcribe_audio(model, audio_segment)
     summary = summarize_transcription(transcription)
-    return summary
+    
+    print("Summary:", summary)
+    
+    text_to_speech(summary)
 
 if __name__ == "__main__":
     download_youtube_audio(video_url)
-    summary = summarize_audio_video()
-    print(summary)
+    summarize_and_speak()

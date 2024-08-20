@@ -4,3 +4,6 @@ vosk-en-big
 vosk-model-small-ru-0.22
 
 .env
+
+# ignore all youtube downloaded files
+downloads
