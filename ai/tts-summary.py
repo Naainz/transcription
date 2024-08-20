@@ -7,15 +7,15 @@ import openai
 import numpy as np
 import librosa
 import os
+import requests
 from dotenv import load_dotenv
-from gtts import gTTS
-from playsound import playsound
 
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
+elevenlabs_api_key = os.getenv("ELEVENLABS_API_KEY")
 
 # CHANGE THIS TO THE PATH OF THE AUDIO / VIDEO
-file_path = 'audio/el.mp3' 
+file_path = 'audio/el.mp3'  
 
 def load_whisper_model():
     model = whisper.load_model("base")
@@ -32,7 +32,7 @@ def transcribe_audio(model, audio_segment):
 
 def summarize_transcription(transcription):
     response = openai.ChatCompletion.create(
-        model="gpt-4",
+        model="gpt-4o-mini",
         messages=[
             {"role": "system", "content": "You are a helpful assistant."},
             {"role": "user", "content": f"Please summarize the following transcription:\n\n{transcription}"}
@@ -42,10 +42,29 @@ def summarize_transcription(transcription):
     return summary
 
 def text_to_speech(text):
-    tts = gTTS(text=text, lang='en')
-    tts.save("summary.mp3")
-    playsound("summary.mp3")
-    os.remove("summary.mp3")
+    url = "https://api.elevenlabs.io/v1/text-to-speech/nPczCjzI2devNBz1zQrb"
+    headers = {
+        "Accept": "audio/mpeg",
+        "xi-api-key": elevenlabs_api_key,
+        "Content-Type": "application/json"
+    }
+    data = {
+        "text": text,
+        "model_id": "eleven_turbo_v2",
+        "voice_settings": {
+            "stability": 0.5,
+            "similarity_boost": 0.75
+        }
+    }
+    
+    response = requests.post(url, json=data, headers=headers)
+    if response.status_code == 200:
+        with open("output.mp3", "wb") as f:
+            f.write(response.content)
+        os.system("afplay output.mp3")  
+        os.remove("output.mp3")
+    else:
+        print("Error:", response.status_code, response.text)
 
 def summarize_and_speak():
     model = load_whisper_model()
