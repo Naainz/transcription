@@ -1,3 +1,6 @@
+# USE THIS SCRIPT TO LIST ALL MICROPHONES / INPUT DEVICES
+# CONNECTED TO YOUR SYSTEM
+
 import pyaudio
 
 def list_microphones():
